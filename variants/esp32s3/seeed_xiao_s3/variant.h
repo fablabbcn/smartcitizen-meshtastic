@@ -87,4 +87,11 @@ L76K GPS Module Information : https://www.seeedstudio.com/L76K-GNSS-Module-for-S
 #define SX126X_RXEN 38
 #define SX126X_TXEN RADIOLIB_NC
 #define SX126X_DIO3_TCXO_VOLTAGE 1.8
+
+#define HAS_SDCARD // Have SPI interface SD card slot
+#define SPI_MISO 8
+#define SPI_SCK 7
+#define SPI_MOSI 9
+#define SDCARD_CS 41
+#define SDCARD_USE_SPI1
 #endif

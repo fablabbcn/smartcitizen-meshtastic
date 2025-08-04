@@ -8,6 +8,7 @@
  * device's filesystem.
  *
  */
+
 #include "FSCommon.h"
 #include "SPILock.h"
 #include "configuration.h"
@@ -16,6 +17,9 @@
 #if defined(HAS_SDCARD) && !defined(SDCARD_USE_SOFT_SPI)
 #include <SD.h>
 #include <SPI.h>
+#ifndef SD_SPI_FREQUENCY
+#define SD_SPI_FREQUENCY 4000000U
+#endif
 
 #ifdef SDCARD_USE_SPI1
 SPIClass SPI_HSPI(HSPI);
@@ -29,10 +33,6 @@ SPIClass SPI_HSPI(HSPI);
 #elif defined(SDCARD_USE_SPI)
 #define SDHandler SPI
 #endif // NRF52 SPI or SPI1
-#endif // ESP32/NRF52
-#ifndef SD_SPI_FREQUENCY
-#define SD_SPI_FREQUENCY 4000000U
-#endif
 #endif // HAS_SDCARD
 
 /**

@@ -246,9 +246,9 @@ void setupModules()
 #endif
 #endif
 #if defined(ARCH_ESP32) || defined(ARCH_PORTDUINO) || defined(HAS_SDCARD)
-#if !MESHTASTIC_EXCLUDE_STOREFORWARD
-        storeForwardModule = new StoreForwardModule();
-#endif
+// #if !MESHTASTIC_EXCLUDE_STOREFORWARD
+//         storeForwardModule = new StoreForwardModule();
+// #endif
 #endif
 #if defined(ARCH_ESP32) || defined(ARCH_NRF52) || defined(ARCH_RP2040) || defined(ARCH_PORTDUINO)
 #if !MESHTASTIC_EXCLUDE_EXTERNALNOTIFICATION

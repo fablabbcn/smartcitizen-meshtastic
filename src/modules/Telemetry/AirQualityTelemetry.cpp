@@ -24,6 +24,11 @@ PMSA003ISensor pmsa003iSensor;
 
 #include "graphics/ScreenFonts.h"
 
+#ifdef HAS_SDCARD
+#include "SPILock.h"
+#include <SD.h>
+#endif
+
 int32_t AirQualityTelemetryModule::runOnce()
 {
     if (sleepOnNextExecution == true) {
@@ -61,6 +66,8 @@ int32_t AirQualityTelemetryModule::runOnce()
 
             if (pmsa003iSensor.hasSensor())
                 result = pmsa003iSensor.runOnce();
+
+            populateSDCard();
         }
 
         // it's possible to have this module enabled, only for displaying values on the screen.
@@ -100,6 +107,26 @@ int32_t AirQualityTelemetryModule::runOnce()
 
     }
     return min(sendToPhoneIntervalMs, result);
+}
+
+/**
+ * if we have an SDCARD, create folder for AQ Telemetry
+ */
+void AirQualityTelemetryModule::populateSDCard()
+{
+#if defined(HAS_SDCARD)
+#if (defined(ARCH_ESP32) || defined(ARCH_NRF52))
+    LOG_INFO("Populating SD-card");
+    spiLock->lock();
+    if (SD.cardType() != CARD_NONE) {
+        if (!SD.exists("/aqtelemetry")) {
+            LOG_INFO("Creating AQ Telemetry directory");
+            SD.mkdir("/aqtelemetry");
+        }
+    }
+    spiLock->unlock();
+#endif // ARCH_ESP32 || ARCH_NRF52
+#endif // HAS_SDCARD
 }
 
 bool AirQualityTelemetryModule::wantUIFrame()
@@ -292,6 +319,7 @@ bool AirQualityTelemetryModule::sendTelemetry(NodeNum dest, bool phoneOnly)
             packetPool.release(lastMeasurementPacket);
 
         lastMeasurementPacket = packetPool.allocCopy(*p);
+
         if (phoneOnly) {
             LOG_INFO("Sending packet to phone");
             service->sendToPhone(p);
@@ -313,6 +341,68 @@ bool AirQualityTelemetryModule::sendTelemetry(NodeNum dest, bool phoneOnly)
                 setIntervalFromNow(FIVE_SECONDS_MS);
             }
         }
+
+        // Save to SDCARD
+        if (getRTCQuality() != RTCQualityNone) {
+#if defined(HAS_SDCARD)
+#if defined(ARCH_ESP32) || defined(ARCH_NRF52)
+            // Create the name with YY-MM-DD.CSV
+            char postfileName[32];
+
+            time_t epoch = getTime();
+            struct tm *tm_info;
+            tm_info = gmtime(&epoch);
+            sprintf(postfileName, "%02d-%02d-%02d.CSV", tm_info->tm_year, tm_info->tm_mon, tm_info->tm_mday);
+
+            bool has_header = true;
+
+            LOG_DEBUG("Header %s", postfileName);
+
+            spiLock->lock();
+            if (!SD.exists("/aqtelemetry/" + String(postfileName))) {
+                LOG_INFO("File doesn't exist.");
+                has_header = false;
+            }
+
+            // One CSV per day
+            auto handler = SD.open("/aqtelemetry/" + String(postfileName), FILE_WRITE, true);
+
+
+            if (!has_header) {
+                // Write header
+                LOG_INFO("Writing header");
+                handler.print("TIME,");
+                if (m.variant.air_quality_metrics.has_pm10_standard) {
+                    handler.print("PM_1_STANDARD,");
+                }
+                if (m.variant.air_quality_metrics.has_pm25_standard) {
+                    handler.print("PM_25_STANDARD,");
+                }
+                if (m.variant.air_quality_metrics.has_pm100_standard) {
+                    handler.println("PM_10_STANDARD");
+                }
+                // TODO - Maybe a more elegant way of doing this?
+            }
+
+            uint32_t timestamp =  getTime();
+            // Write data
+            if (m.variant.air_quality_metrics.has_pm10_standard) {
+                handler.print(m.variant.air_quality_metrics.has_pm10_standard);
+            }
+            if (m.variant.air_quality_metrics.has_pm25_standard) {
+                handler.print(m.variant.air_quality_metrics.has_pm25_standard);
+            }
+            if (m.variant.air_quality_metrics.has_pm100_standard) {
+                handler.println(m.variant.air_quality_metrics.has_pm100_standard);
+            }
+
+            handler.close();
+            spiLock->unlock();
+#endif
+#endif
+        }
+
+
         return true;
     }
     return false;
