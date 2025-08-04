@@ -9,6 +9,11 @@
 #include <functional>
 #include <unordered_map>
 
+#ifdef HAS_SDCARD
+#include "SPILock.h"
+#include <SD.h>
+#endif
+
 struct PacketHistoryStruct {
     uint32_t time;
     uint32_t to;
@@ -22,6 +27,9 @@ struct PacketHistoryStruct {
     int32_t rx_rssi;
     float rx_snr;
 };
+
+// enum for the storage type
+enum StorageType { ST_PSRAM, ST_SDCARD };
 
 class StoreForwardModule : private concurrency::OSThread, public ProtobufModule<meshtastic_StoreAndForward>
 {
@@ -85,6 +93,10 @@ class StoreForwardModule : private concurrency::OSThread, public ProtobufModule<
 
   private:
     void populatePSRAM();
+    void populateSDCard();
+
+    // Storage Type
+    StorageType storageType = ST_PSRAM;
 
     // S&F Defaults
     uint32_t historyReturnMax = 25;     // Return maximum of 25 records by default.
