@@ -30,6 +30,14 @@ SCD4XSensor scd4xSensor;
 NullSensor scd4xSensor;
 #endif
 
+#if __has_include(<SensirionI2cScd30.h>)
+#include "Sensor/SCD30Sensor.h"
+SCD30Sensor scd30Sensor;
+#else
+NullSensor scd30Sensor;
+#endif
+
+
 #include "graphics/ScreenFonts.h"
 
 int32_t AirQualityTelemetryModule::runOnce()
@@ -49,10 +57,10 @@ int32_t AirQualityTelemetryModule::runOnce()
         without having to configure it from the PythonAPI or WebUI.
     */
 
-    // moduleConfig.telemetry.air_quality_enabled = 1;
+    moduleConfig.telemetry.air_quality_enabled = 1;
     // TODO there is no config in module_config.proto for air_quality_screen_enabled. Reusing environment one, although it should have its own
-    // moduleConfig.telemetry.environment_screen_enabled = 1;
-    // moduleConfig.telemetry.air_quality_interval = 15;
+    moduleConfig.telemetry.environment_screen_enabled = 1;
+    moduleConfig.telemetry.air_quality_interval = 15;
 
     if (!(moduleConfig.telemetry.air_quality_enabled  || moduleConfig.telemetry.environment_screen_enabled ||
           AIR_QUALITY_TELEMETRY_MODULE_ENABLE)) {
@@ -72,6 +80,9 @@ int32_t AirQualityTelemetryModule::runOnce()
 
             if (scd4xSensor.hasSensor())
                 result = scd4xSensor.runOnce();
+
+            if (scd30Sensor.hasSensor())
+                result = scd30Sensor.runOnce();
         }
 
         // it's possible to have this module enabled, only for displaying values on the screen.
@@ -256,6 +267,11 @@ bool AirQualityTelemetryModule::getAirQualityTelemetry(meshtastic_Telemetry *m)
 
     if (scd4xSensor.hasSensor()) {
         valid = valid && scd4xSensor.getMetrics(m);
+        hasSensor = true;
+    }
+    
+    if (scd30Sensor.hasSensor()) {
+        valid = valid && scd30Sensor.getMetrics(m);
         hasSensor = true;
     }
 
