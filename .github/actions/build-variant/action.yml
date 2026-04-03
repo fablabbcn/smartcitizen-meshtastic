@@ -78,7 +78,7 @@ runs:
     - name: PlatformIO ${{ inputs.arch }} download cache
       uses: actions/cache@v5
       with:
-        path: ~/.platformio/.cache
+        path: ~/.platformio/
         key: pio-cache-${{ inputs.arch }}-${{ hashFiles('.github/actions/**', '**.ini') }}
 
     - name: Build ${{ inputs.board }}
