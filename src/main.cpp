@@ -142,6 +142,10 @@ AudioThread *audioThread = nullptr;
 ExtensionIOXL9555 io;
 #endif
 
+#ifdef USE_MCP23017
+#include "platform/esp32/ExtensionIOMCP23017.h"
+#endif
+
 #if HAS_TFT
 extern void tftSetup(void);
 #endif
@@ -530,6 +534,12 @@ void setup()
     powerStatus->observe(&power->newStatus);
     power->setup(); // Must be after status handler is installed, so that handler gets notified of the initial configuration
 
+#ifdef USE_MCP23017
+    // Bring up the I2C IO expander (LoRa reset, LCD reset, GPS wake) now that the PMU rails are up,
+    // before the I2C scan and radio/display init
+    mcp23017EarlyInit();
+#endif
+
 #if !MESHTASTIC_EXCLUDE_I2C
     // We need to scan here to decide if we have a screen for nodeDB.init() and because power has been applied to
     // accessories
@@ -794,6 +804,17 @@ void setup()
     delay(10);
 #endif
     drv.begin();
+
+    // Bits	Field	        Value	Meaning
+    // 7	N_ERM_LRA	    1	    LRA mode (vs 0 = ERM)
+    // 6:4	FB_BRAKE_FACTOR	3	    4× brake factor
+    // 3:2	LOOP_GAIN	    1	    medium loop gain
+    // 1:0	BEMF_GAIN	    2	    back-EMF gain
+
+#if defined(DRV2605_USE_LRA)
+    drv.writeRegister8(DRV2605_REG_FEEDBACK, 0xB6);
+#endif
+
     drv.selectLibrary(1);
     // I2C trigger by sending 'go' command
     drv.setMode(DRV2605_MODE_INTTRIG);
